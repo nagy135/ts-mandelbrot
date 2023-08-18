@@ -1,38 +1,27 @@
 const WIDTH = 490;
 const HEIGHT = 490;
-const _drawPixel = (ctx: CanvasRenderingContext2D) => {
-  return (color: number, x: number, y: number) => {
+
+const _drawPixel =
+  (ctx: CanvasRenderingContext2D) => (color: number, x: number, y: number) => {
     const r = color;
-    const g = 200;
-    const b = 200;
+    const g = 20;
+    const b = 20;
     const a = color;
     ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + a / 255 + ")";
     ctx.fillRect(x, y, 1, 1);
   };
-};
-const _map = function (
-  in_min: number,
-  in_max: number,
-  out_min: number,
-  out_max: number
-) {
-  return (input: number) =>
-    ((input - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
-};
+const _map =
+  (inMin: number, inMax: number, outMin: number, outMax: number) =>
+  (input: number) =>
+    ((input - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
 
-const mapX = _map(0, WIDTH, -2, 0.47);
-const mapY = _map(0, HEIGHT, -1.12, 1.12);
-
-const computePixelColor = (px: number, py: number): number => {
-  const x0 = mapX(px);
-  const y0 = mapY(py);
-
+const computePixelColor = (x0: number, y0: number): number => {
   let x = 0;
   let y = 0;
 
   let iteration = 0;
   let maxIteration = 100;
-  while (x * x + y * y <= 2 * 2 && iteration < maxIteration) {
+  while (x ** 2 + y ** 2 <= 2 * 2 && iteration < maxIteration) {
     const xTemp = x ** 2 - y ** 2 + x0;
     y = 2 * x * y + y0;
     x = xTemp;
@@ -41,22 +30,71 @@ const computePixelColor = (px: number, py: number): number => {
   return iteration;
 };
 
+let viewBox = {
+  x: [0, WIDTH],
+  y: [0, HEIGHT],
+};
+
+const render = (context: CanvasRenderingContext2D) => {
+  const drawPixel = _drawPixel(context);
+
+  const viewBoxXMap = _map(0, WIDTH, viewBox.x[0], viewBox.x[1]);
+  const viewBoxYMap = _map(0, HEIGHT, viewBox.y[0], viewBox.y[1]);
+
+  const mapX = _map(0, WIDTH, -2, 0.47);
+  const mapY = _map(0, HEIGHT, -1.12, 1.12);
+
+  for (let y = 0; y < HEIGHT; y += 1) {
+    for (let x = 0; x < WIDTH; x += 1) {
+      const xInViewBox = viewBoxXMap(x);
+      const yInViewBox = viewBoxYMap(y);
+
+      const xInSet = mapX(xInViewBox);
+      const yInSet = mapY(yInViewBox);
+
+      const color = computePixelColor(xInSet, yInSet);
+      drawPixel(color, x, y);
+    }
+  }
+};
+
 const main = () => {
   let canvas = document.getElementById("canvas") as HTMLCanvasElement;
   let context = canvas.getContext("2d");
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.strokeStyle = "black";
-  context.lineWidth = 1;
 
-  const drawPixel = _drawPixel(context);
+  let clicked: [number, number] | null = null;
 
-  for (let py = 0; py < HEIGHT; py += 1) {
-    for (let px = 0; px < WIDTH; px += 1) {
-      const color = computePixelColor(px, py);
-      drawPixel(color, px, py);
-    }
-  }
+  canvas.onmousedown = (e) => {
+    const viewBoxXMap = _map(0, WIDTH, viewBox.x[0], viewBox.x[1]);
+    const viewBoxYMap = _map(0, HEIGHT, viewBox.y[0], viewBox.y[1]);
+    clicked = [viewBoxXMap(e.offsetX), viewBoxYMap(e.offsetY)];
+  };
+
+  canvas.onmouseup = (e) => {
+    if (!clicked) return;
+
+    const viewBoxXMap = _map(0, WIDTH, viewBox.x[0], viewBox.x[1]);
+    const viewBoxYMap = _map(0, HEIGHT, viewBox.y[0], viewBox.y[1]);
+
+    const clickedX = viewBoxXMap(e.offsetX);
+    const clickedY = viewBoxYMap(e.offsetY);
+
+    viewBox.x = [
+      Math.min(clicked[0], clickedX),
+      Math.max(clicked[0], clickedX),
+    ];
+    viewBox.y = [
+      Math.min(clicked[1], clickedY),
+      Math.max(clicked[1], clickedY),
+    ];
+
+    context.clearRect(0, 0, WIDTH, HEIGHT);
+    render(context);
+
+    clicked = null;
+  };
+
+  render(context);
 };
 
 main();
