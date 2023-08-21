@@ -79,14 +79,16 @@ const main = () => {
     const clickedX = viewBoxXMap(e.offsetX);
     const clickedY = viewBoxYMap(e.offsetY);
 
-    viewBox.x = [
-      Math.min(clicked[0], clickedX),
-      Math.max(clicked[0], clickedX),
-    ];
-    viewBox.y = [
-      Math.min(clicked[1], clickedY),
-      Math.max(clicked[1], clickedY),
-    ];
+    const maxWidth = Math.max(
+      Math.abs(clicked[0] - clickedX),
+      Math.abs(clicked[1] - clickedY)
+    );
+
+    const x = Math.min(clicked[0], clickedX);
+    const y = Math.min(clicked[1], clickedY);
+
+    viewBox.x = [x, x + maxWidth];
+    viewBox.y = [y, y + maxWidth];
 
     context.clearRect(0, 0, WIDTH, HEIGHT);
     render(context);
